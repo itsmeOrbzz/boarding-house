@@ -25,6 +25,6 @@ services:
         value: errorlog
 
   # Database Service
-  - type: psql
-    name: boarding-house-db
+databases:
+  - name: boarding-house-db
     plan: free
