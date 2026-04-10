@@ -2,10 +2,8 @@ services:
   # Web Service
   - type: web
     name: boarding-house-app
-    env: php
+    env: docker
     plan: free
-    buildCommand: "./render-build.sh"
-    startCommand: "heroku-php-apache2 public/"
     envVars:
       - key: APP_NAME
         value: BoardingHouse
@@ -24,7 +22,7 @@ services:
       - key: LOG_CHANNEL
         value: errorlog
 
-  # Database Service
 databases:
+  # Database Service
   - name: boarding-house-db
     plan: free
