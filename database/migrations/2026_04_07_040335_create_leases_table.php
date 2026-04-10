@@ -13,15 +13,18 @@ return new class extends Migration
     {
         Schema::create('leases', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained('rooms')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // The landlady
+            $table->foreignId('room_id')->constrained()->cascadeOnDelete(); // The room
+            
+            // The Room's Financial Rules
             $table->decimal('rent_amount', 10, 2)->default(0);
             $table->decimal('water_amount', 10, 2)->default(0);
             $table->decimal('internet_amount', 10, 2)->default(0);
-            $table->decimal('default_kwh_rate', 8, 2)->default(20);
-            $table->integer('billing_day'); // Day of the month (1-28)
-            $table->enum('status', ['active', 'ended'])->default('active');
-            $table->string('qr_token')->unique()->nullable();
+            $table->decimal('default_kwh_rate', 8, 2)->default(0);
+            
+            $table->string('status')->default('active');
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->timestamps();
         });
     }

@@ -15,7 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('property_id')->constrained('properties')->cascadeOnDelete();
             $table->string('room_number'); // e.g., "Room 1"
+            $table->integer('floor')->default(1);
             $table->integer('capacity')->default(1);
+
+            $table->decimal('current_meter_reading', 10, 2)->default(0);
             $table->timestamps();
         });
     }

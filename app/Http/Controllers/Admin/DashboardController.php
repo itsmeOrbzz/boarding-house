@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Bill;
 use App\Models\Property;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -24,20 +25,70 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Fetch all UNPAID bills specifically for this active property
-        $unpaidBills = Bill::where('status', 'unpaid')
+        // 1. Fetch UNPAID leases and roll up amounts
+        $unpaidLeases = \App\Models\Lease::whereHas('bills', function ($q) {
+                $q->whereIn('status', ['unpaid', 'partial']);
+            })
+            ->whereHas('room', function ($query) use ($activeProperty) {
+                $query->where('property_id', $activeProperty->id);
+            })
+            ->with(['room', 'tenants', 'bills' => function ($q) {
+                $q->whereIn('status', ['unpaid', 'partial'])->with('payments');
+            }])
+            ->get()
+            ->map(function ($lease) {
+                $totalOwed = 0;
+                $nearestDueDate = null;
+                $billCount = 0;
+
+                foreach ($lease->bills as $bill) {
+                    $paid = $bill->payments->sum('amount_paid');
+                    $bal = $bill->total_amount - $paid;
+                    $totalOwed += $bal;
+                    $billCount++;
+
+                    if (!$nearestDueDate || $bill->due_date < $nearestDueDate) {
+                        $nearestDueDate = $bill->due_date;
+                    }
+                }
+
+                return [
+                    'id' => $lease->id,
+                    'room' => $lease->room,
+                    'tenants' => $lease->tenants,
+                    'total_outstanding' => $totalOwed,
+                    'due_date' => $nearestDueDate,
+                    'bill_count' => $billCount,
+                ];
+            });
+
+
+        // 2. Calculate Expected Revenue (Sum of all bills generated this month)
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
+
+        $expectedRevenue = Bill::whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
             ->whereHas('lease.room', function ($query) use ($activeProperty) {
                 $query->where('property_id', $activeProperty->id);
             })
-            // Eager load the relationships so React can see the tenant's name and room number
-            ->with(['lease.tenant', 'lease.room']) 
-            ->get();
+            ->sum('total_amount');
+
+        // 3. Calculate Collected So Far (Sum of all payments made this month)
+        $collectedSoFar = Payment::whereMonth('paid_at', $currentMonth)
+            ->whereYear('paid_at', $currentYear)
+            ->whereHas('bill.lease.room', function ($query) use ($activeProperty) {
+                $query->where('property_id', $activeProperty->id);
+            })
+            ->sum('amount_paid');
 
         // Send the data to the React frontend
         return Inertia::render('Dashboard', [
             'hasProperty' => true,
             'activeProperty' => $activeProperty,
-            'unpaidBills' => $unpaidBills,
+            'unpaidLeases' => $unpaidLeases,
+            'expectedRevenue' => $expectedRevenue,
+            'collectedSoFar' => $collectedSoFar,
         ]);
     }
 }

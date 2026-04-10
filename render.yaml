@@ -1,0 +1,30 @@
+services:
+  # Web Service
+  - type: web
+    name: boarding-house-app
+    env: php
+    plan: free
+    buildCommand: "./render-build.sh"
+    startCommand: "heroku-php-apache2 public/"
+    envVars:
+      - key: APP_NAME
+        value: BoardingHouse
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_DEBUG
+        value: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: boarding-house-db
+          property: connectionString
+      - key: LOG_CHANNEL
+        value: errorlog
+
+  # Database Service
+  - type: psql
+    name: boarding-house-db
+    plan: free

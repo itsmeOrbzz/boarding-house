@@ -6,21 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class Room extends Model
 {
-    protected $fillable = ['property_id', 'room_number', 'capacity'];
+    protected $guarded = [];
 
     public function property()
     {
         return $this->belongsTo(Property::class);
     }
 
-    public function leases()
+    public function lease()
     {
-        return $this->hasMany(Lease::class);
+        // Assuming one active lease per room for simplicity
+        return $this->hasOne(Lease::class)->where('status', 'active');
     }
 
-    // Quick helper to get the current active tenant
-    public function activeLease()
+    public function tenants()
     {
-        return $this->hasOne(Lease::class)->where('status', 'active');
+        return $this->hasMany(Tenant::class);
     }
 }
